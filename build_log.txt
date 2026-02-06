@@ -1,37 +1,56 @@
-Build Log - Deep Pyramid Multi-Agent System Self-Evaluation
-===========================================================
+# Build Log - Chess Game Enhancement
 
-Date: 2026-02-06T10:46:43Z
-Component: Coder Worker
-Status: BUILD SUCCESSFUL
+## Date: 2026-02-06
 
-Artifacts Created:
--------------------
-1. /workspace/src/evaluate_system.py
-   - Python 3 self-evaluation script
-   - Purpose: Demonstrates the Deep Pyramid Multi-Agent System is operational
-   - Features:
-     * Prints system status
-     * Displays "Hello, Pyramid!" message
-     * Lists all tested components
-     * Shows evaluation result (PASS/FAIL)
+## Changes Made
 
-2. /workspace/build_log.txt (this file)
-   - Documents the build process
+### 1. Fixed King Logic Bug
+**Problem:** King could move into check (illegal chess move)
 
-Build Details:
---------------
-- Script executable: Yes
-- Python version required: 3.x
-- Dependencies: None (standard library only)
-- Entry point: evaluate_system.py main()
-- Exit codes: 0 (success), non-zero (failure)
+**Solution:**
+- Added `isSquareSafe(row, col, color)` function to check if a square is under attack by opponent pieces
+- Updated king's `isValidMove()` to verify destination is safe before allowing the move
+- This now properly prevents the king from moving into check
 
-Test Plan:
-----------
-1. Run script: python3 src/evaluate_system.py
-2. Verify output includes "Hello, Pyramid!"
-3. Confirm all components listed
-4. Check for EVALUATION RESULT: PASS
+### 2. Added AI Opponent
+**Features:**
+- Added toggle button "Play vs AI" / "Play vs Human" in controls
+- AI plays as black (computer vs white/human)
+- AI strategy:
+  * Prioritizes capturing opponent pieces
+  * Otherwise makes random legal moves
+  * Always moves pieces that don't leave the king in check
+  * Adds 500-1000ms delay for natural gameplay feel
+- Auto-resets game when toggling AI mode
 
-Build completed successfully. Ready for testing phase.
+**Implementation:**
+- Added `aiMode` variable (default: false)
+- Added `toggleAI()` function to switch between AI and human mode
+- Added `computerMove()` function that:
+  * Collects all legal moves for black
+  * Separates capture moves from regular moves
+  * Prioritizes captures
+  * Validates moves don't put king in check
+  * Executes move with randomized delay
+- Modified `makeMove()` to trigger AI move after white's turn when AI is enabled
+
+### 3. UI Enhancements
+- Added AI toggle button to controls section
+- Button text updates to show current mode
+
+## Technical Details
+
+### King Logic Fix
+The `isSquareSafe()` function iterates through all opponent pieces and checks if they can attack the target square. For the king's own move validation, we use this to ensure the king doesn't move into danger.
+
+### AI Implementation
+The AI is a simple random-move player with capture prioritization. While not strategic, it provides a functional single-player experience. Future enhancements could include:
+- Minimax algorithm with alpha-beta pruning
+- Piece value evaluation
+- Position-based scoring
+
+## Testing
+- AI moves are generated successfully
+- King cannot move into check
+- Game continues properly after AI moves
+- Toggle button resets game correctly

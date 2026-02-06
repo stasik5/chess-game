@@ -231,6 +231,7 @@
     <div class="controls">
         <button onclick="resetGame()">New Game</button>
         <button onclick="undoMove()">Undo Move</button>
+        <button id="aiToggle" onclick="toggleAI()">Play vs AI</button>
     </div>
 
     <script>
@@ -260,6 +261,7 @@
         let moveHistory = [];
         let isCheckmate = false;
         let lastMove = null;
+        let aiMode = false;
 
         // Initialize the game
         function initGame() {
@@ -369,6 +371,30 @@
             }
         }
 
+        // Check if a square is safe from opponent attacks
+        function isSquareSafe(row, col, color) {
+            const opponentColor = color === 'white' ? 'black' : 'white';
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const piece = board[r][c];
+                    if (piece && piece[0] === opponentColor[0]) {
+                        // Temporarily ignore king's safety check to prevent infinite recursion
+                        if (piece[1] === 'k') {
+                            const rowDiff = Math.abs(row - r);
+                            const colDiff = Math.abs(col - c);
+                            if (rowDiff <= 1 && colDiff <= 1) {
+                                return false;
+                            }
+                        } else if (isValidMove(r, c, row, col)) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
         // Check if a move is valid
         function isValidMove(fromRow, fromCol, toRow, toCol) {
             const piece = board[fromRow][fromCol];
@@ -416,7 +442,9 @@
                     return isPathClear(fromRow, fromCol, toRow, toCol);
 
                 case 'k': // King
-                    return absRowDiff <= 1 && absColDiff <= 1;
+                    if (absRowDiff > 1 || absColDiff > 1) return false;
+                    // Check if destination is safe from opponent attacks
+                    return isSquareSafe(toRow, toCol, color);
             }
 
             return false;
@@ -474,6 +502,11 @@
             
             // Switch turns
             currentTurn = currentTurn === 'white' ? 'black' : 'white';
+
+            // AI move if enabled and it's black's turn
+            if (aiMode && currentTurn === 'black' && !isCheckmate) {
+                computerMove();
+            }
 
             // Check for check/checkmate
             const inCheck = isInCheck(currentTurn);
@@ -580,6 +613,66 @@
         // Reset the game
         function resetGame() {
             initGame();
+        }
+
+        // Toggle AI mode
+        function toggleAI() {
+            aiMode = !aiMode;
+            const button = document.getElementById('aiToggle');
+            button.textContent = aiMode ? 'Play vs Human' : 'Play vs AI';
+            resetGame();
+        }
+
+        // Computer move (simple AI)
+        function computerMove() {
+            if (isCheckmate) return;
+
+            const legalMoves = [];
+            const captureMoves = [];
+
+            // Collect all legal moves
+            for (let fromRow = 0; fromRow < 8; fromRow++) {
+                for (let fromCol = 0; fromCol < 8; fromCol++) {
+                    const piece = board[fromRow][fromCol];
+                    if (piece && piece[0] === 'b') {
+                        for (let toRow = 0; toRow < 8; toRow++) {
+                            for (let toCol = 0; toCol < 8; toCol++) {
+                                if (isValidMove(fromRow, fromCol, toRow, toCol)) {
+                                    // Simulate move to check if king is safe
+                                    const tempBoard = JSON.parse(JSON.stringify(board));
+                                    board[toRow][toCol] = board[fromRow][fromCol];
+                                    board[fromRow][fromCol] = '';
+                                    const safe = !isInCheck('black');
+                                    board = tempBoard;
+
+                                    if (safe) {
+                                        if (board[toRow][toCol] && board[toRow][toCol][0] === 'w') {
+                                            captureMoves.push({ fromRow, fromCol, toRow, toCol });
+                                        } else {
+                                            legalMoves.push({ fromRow, fromCol, toRow, toCol });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Prioritize captures, then random move
+            let chosenMove;
+            if (captureMoves.length > 0) {
+                chosenMove = captureMoves[Math.floor(Math.random() * captureMoves.length)];
+            } else if (legalMoves.length > 0) {
+                chosenMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+            }
+
+            // Execute move with delay
+            if (chosenMove) {
+                setTimeout(() => {
+                    makeMove(chosenMove.fromRow, chosenMove.fromCol, chosenMove.toRow, chosenMove.toCol);
+                }, 500 + Math.random() * 500);
+            }
         }
 
         // Undo last move
